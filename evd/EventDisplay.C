@@ -1,3 +1,10 @@
+/**
+ * @file EventDisplay.C
+ * @brief Event display for Mothership SiPM Wheel.
+ * 
+ * @author H. Sullivan (hunter.sullivan@mavs.uta.edu)
+ */
+
 #include <TGClient.h>
 #include <TCanvas.h>
 #include <TF1.h>

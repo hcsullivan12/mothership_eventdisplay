@@ -28,9 +28,15 @@ import threading
 global x1, x2, x3, x4, myUI
 x1,x2,x3,x4,myUI=0,0,0,0,None
 
+# Stepper motor and disk information
+disk_r   = 0.5*100 #cm
+center   = (0,0)
+#ball_inc = 0.2 #inches / rev
+ball_inc = 0.508 # cm / rev
+
 '''
 @hunter
-creating serial input emulator 
+creating encoder emulator 
 '''
 import Emulator as emu
 emulator = emu.Emulator()
@@ -144,6 +150,15 @@ class Ui_Dialog(QtCore.QObject):
         self.positionInputY = QtGui.QPlainTextEdit(Dialog)
         self.positionInputY.setGeometry(QtCore.QRect(555, 370, 120, 25))
         self.positionInputY.setObjectName("positionInputY")
+        self.setPosition = QtGui.QPushButton(Dialog)
+        self.setPosition.setGeometry(QtCore.QRect(700, 360, 120, 50))
+        self.setPosition.setObjectName("clockwiset")
+        self.label_8 = QtGui.QLabel(Dialog)
+        self.label_8.setGeometry(QtCore.QRect(650, 450, 120, 20))
+        self.label_8.setObjectName("label_8")
+        self.currentPositionLabel = QtGui.QLabel(Dialog)
+        self.currentPositionLabel.setGeometry(QtCore.QRect(770, 450, 120, 20))
+        self.currentPositionLabel.setObjectName("currentPositionLabel")
         
         self.figure = plt.figure() # @hunter figsize=(350,350)
         self.myCanvas = PlotCanvas(Dialog, width=3.5, height=3.5)
@@ -163,6 +178,7 @@ class Ui_Dialog(QtCore.QObject):
         self.backwardb.clicked.connect(self.Backwardb)
         self.backwardt.clicked.connect(self.Backwardt)
         self.quit.clicked.connect(self.Quit)
+        self.setPosition.clicked.connect(self.SetPosition)
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
@@ -188,13 +204,53 @@ class Ui_Dialog(QtCore.QObject):
         self.quit.setText(_translate("Dialog", "Quit"))
         self.positionInputX.setPlainText('0')
         self.positionInputY.setPlainText('0')
+        self.setPosition.setText(_translate("Dialog", "Set position"))
+        self.label_8.setText(_translate("Dialog", "Current position: "))
+        temp = '('+str(self.position['x'])+','+str(self.position['y'])+')'
+        self.currentPositionLabel.setText(_translate("Dialog", temp))
+        
         
     def Update(self):
-        self.positionInputX.setPlainText(str(self.position['x']))
-        self.positionInputY.setPlainText(str(self.position['y']))
+        _translate = QtCore.QCoreApplication.translate
+        temp = "({:.2f}, {:.2f})".format(self.position['x'], self.position['y'])
+        self.currentPositionLabel.setText(_translate("Dialog", temp))
     
     def Quit(self):
         QtCore.QCoreApplication.instance().quit()
+    
+    def SetPosition(self):
+        '''
+        Set the position manually.
+        '''
+        currentX, currentY = self.position['x'], self.position['y']
+        targetX, targetY = float(self.positionInputX.toPlainText()), float(self.positionInputY.toPlainText())
+
+        # compute the angle
+        import numpy as np
+        currentAngle = np.angle(currentX + currentY * 1j, deg = True)
+        targetAngle  = np.angle(targetX + targetY * 1j, deg = True)
+        
+        deltaTheta = targetAngle - currentAngle
+        deltaDist  = (targetX**2+targetY**2)**0.5 - (currentX**2+currentY**2)**0.5
+
+        # how many steps?
+        angleSteps = deltaTheta
+        distSteps  = 360. * deltaDist / ball_inc
+
+        print("Moving to X = {} Y = {} in {} angle steps and {} linear steps".format(targetX, targetY, angleSteps, distSteps))
+        _translate = QtCore.QCoreApplication.translate
+        self.stepsForRotation.setPlainText(_translate("Dialog", str(abs(angleSteps))))
+        self.stepsForLinear.setPlainText(_translate("Dialog", str(abs(distSteps))))
+        if angleSteps < 0:
+            self.Clockwiseb()
+        else:
+            self.Counterclockwiseb()
+        if distSteps < 0:
+            self.Backwardb()
+        else:
+            self.Forwardb()
+        self.position = {'x':targetX, 'y':targetY}
+        self.Update()
     
     def Clockwiseb(self):
         print("Clockwise")
@@ -239,7 +295,7 @@ class Ui_Dialog(QtCore.QObject):
 
     def SerialWrite(self, var, textEdit, sleep=0.1):
         #ArduinoSerial.write(var.encode()) @hunter
-        emulator.setData(var, int(textEdit.toPlainText()))
+        emulator.setData(var, int(float(textEdit.toPlainText()))) # @hunter in case we get 0.0
         time.sleep(sleep)
         #c= str(textEdit.toPlainText())  @hunter
         #ArduinoSerial.write(c.encode()) @hunter
@@ -267,10 +323,6 @@ class PlotCanvas(FigureCanvas):
         Units will be in cm
         Disk diameter ~ 100 cm
         '''
-        disk_r   = 0.5*100 #cm
-        center   = (0,0)
-        #ball_inc = 0.2 #inches / rev
-        ball_inc = 0.508 # cm / rev
         
         ax = self.figure.add_subplot(111)
         ax.cla()
@@ -308,9 +360,6 @@ class PlotCanvas(FigureCanvas):
         
 
 #EncSerial = serial.Serial('COM5', 115200) @hunter
-'''
-@note: we will only use the bottom buttons
-'''
 def reading():
     global myUI
     while True:
@@ -328,7 +377,7 @@ def reading():
                 myUI.position['y'] = y
                 myUI.updatePosition.emit()
 
-reading_thread = threading.Thread(target=reading) # hunter , daemon=True)
+reading_thread = threading.Thread(target=reading) # @hunter , daemon=True)
 reading_thread.daemon = True
 reading_thread.start()
 
