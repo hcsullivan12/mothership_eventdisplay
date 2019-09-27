@@ -1,0 +1,6 @@
+`root-config --cxx --cflags` -fPIC -c FEBDTP.cxx
+rootcint -f FEBDTP_Dict.cxx -c -p FEBDTP.hxx FEBDTP_LinkDef.h
+`root-config --cxx --cflags` -fPIC -c FEBDTP_Dict.cxx
+`root-config --cxx --cflags` -fPIC -shared -o libFEBDTP.so FEBDTP.o FEBDTP_Dict.o
+rm *.o
+
