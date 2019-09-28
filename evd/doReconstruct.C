@@ -1,5 +1,5 @@
 /**
- * @file RecoHelper.C
+ * @file doReconstruct.C
  * @author H. Sullivan (hsulliva@fnal.gov)
  * @brief Interface to reconstruction algorithm for event display.
  * @date 07-04-2019
@@ -7,13 +7,9 @@
  */
 
 #include "Reconstructor.h"
-R__LOAD_LIBRARY(mthship_evd/libReconstructor.so)
+R__LOAD_LIBRARY(evd/libReconstructor.so)
 #include "Pixel.h"
 
-/**
- * @brief 
- * 
- */
 struct RecoHelper
 {
   typedef std::shared_ptr<std::vector<majutil::Pixel>> pixelTablePtr_t;

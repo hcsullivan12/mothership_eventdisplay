@@ -82,6 +82,7 @@ public:
    void SetMethodChi2();
    void SetMethodEmMl();
    void UpdateRecoHelper();
+   void UpdateRobotData();
 };
 
 //------------------------------------------------------------------------
@@ -360,10 +361,11 @@ void MyMainFrame::SetDataTypeData()
 //------------------------------------------------------------------------
 void MyMainFrame::SetDataTypeMC()
 {
-  fDataType = "mc";
-
-  if (isDataBut->IsOn()) isDataBut->SetState(kButtonUp);
-  isMCBut->SetState(kButtonDown);
+  isMCBut->SetState(kButtonUp);
+  //fDataType = "mc";
+  //
+  //if (isDataBut->IsOn()) isDataBut->SetState(kButtonUp);
+  //isMCBut->SetState(kButtonDown);
 }
 
 //------------------------------------------------------------------------
@@ -378,10 +380,11 @@ void MyMainFrame::SetMethodChi2()
 //------------------------------------------------------------------------
 void MyMainFrame::SetMethodEmMl()
 {
-  fMethod = "emml";
-
-  if (doChi2But->IsOn()) doChi2But->SetState(kButtonUp);
-  doEmMlBut->SetState(kButtonDown);
+  doEmMlBut->SetState(kButtonUp);
+  //fMethod = "emml";
+  //
+  //if (doChi2But->IsOn()) doChi2But->SetState(kButtonUp);
+  //doEmMlBut->SetState(kButtonDown);
 }
 
 
@@ -414,8 +417,8 @@ void MyMainFrame::ChangeStartLabel()
 //------------------------------------------------------------------------
 void MyMainFrame::UpdateRecoHelper()
 {
-  std::string pixelizationPath = fTopDir+"/production/mothership/"+std::to_string(fPixelSize)+"mm/pixelization.txt";
-  std::string opRefTablePath   = fTopDir+"/production/mothership/"+std::to_string(fPixelSize)+"mm/opRefTable.txt";
+  std::string pixelizationPath = fTopDir+"/lookupTables/"+std::to_string(fPixelSize)+"mm/pixelization.txt";
+  std::string opRefTablePath   = fTopDir+"/lookupTables/"+std::to_string(fPixelSize)+"mm/opRefTable.txt";
   
   // if these are new, we will load the new pixel scheme
   std::string oldPixelPath  = fRecoHelper.thePixelPath;
@@ -641,18 +644,23 @@ bool MyMainFrame::IsDAQFileModified()
 }
 
 //------------------------------------------------------------------------
+void MyMainFrame::UpdateRobotData()
+{
+  // Grab the current position
+  //fRobotPosition = fConnector.GetPosition();
+
+
+}
+
+//------------------------------------------------------------------------
 void MyMainFrame::HandleTimer() 
 {
   if (!fIsRunning && IsDAQFileModified()) 
   {
     std::cout << "Detected new DAQ file!\n";
-    // Grab the true distribution
-    TFile s(fTrueDistPath.c_str(), "READ");
-    if (s.IsOpen()) {
-      s.GetObject("primHist", fPrimHist);
-      if (!fPrimHist) cout << "\nWARNING: Couldn't find true distribution...\n";
-      //s.Close();
-    } else {cout << "\nWARNING: Couldn't find simulate output path named \'"+fTrueDistPath+"\'...\n";}
+    // Grab position data from robot
+    UpdateRobotData();
+    // Start reconstruction
     StartReco();
   }
 }

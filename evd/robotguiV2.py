@@ -28,6 +28,11 @@ import threading
 global x1, x2, x3, x4, myUI
 x1,x2,x3,x4,myUI=0,0,0,0,None
 
+# option for input steering file
+doSteering = True
+steeringSteps = list()
+stepping = False
+
 # Stepper motor and disk information
 disk_r   = 0.5*100 #cm
 center   = (0,0)
@@ -43,6 +48,8 @@ emulator = emu.Emulator()
 
 class Ui_Dialog(QtCore.QObject):
     updatePosition = pyqtSignal()
+    stepperThread = None 
+    currentStep = 0
 
     def __init__(self):
         QtCore.QObject.__init__(self)
@@ -152,13 +159,16 @@ class Ui_Dialog(QtCore.QObject):
         self.positionInputY.setObjectName("positionInputY")
         self.setPosition = QtGui.QPushButton(Dialog)
         self.setPosition.setGeometry(QtCore.QRect(700, 360, 120, 50))
-        self.setPosition.setObjectName("clockwiset")
+        self.setPosition.setObjectName("setPosition")
         self.label_8 = QtGui.QLabel(Dialog)
         self.label_8.setGeometry(QtCore.QRect(650, 450, 120, 20))
         self.label_8.setObjectName("label_8")
         self.currentPositionLabel = QtGui.QLabel(Dialog)
         self.currentPositionLabel.setGeometry(QtCore.QRect(770, 450, 120, 20))
         self.currentPositionLabel.setObjectName("currentPositionLabel")
+        self.runStepper = QtGui.QPushButton(Dialog)
+        self.runStepper.setGeometry(QtCore.QRect(700, 300, 120, 50))
+        self.runStepper.setObjectName("runStepper")
         
         self.figure = plt.figure() # @hunter figsize=(350,350)
         self.myCanvas = PlotCanvas(Dialog, width=3.5, height=3.5)
@@ -179,6 +189,7 @@ class Ui_Dialog(QtCore.QObject):
         self.backwardt.clicked.connect(self.Backwardt)
         self.quit.clicked.connect(self.Quit)
         self.setPosition.clicked.connect(self.SetPosition)
+        self.runStepper.clicked.connect(self.StartStepper)
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
@@ -208,13 +219,34 @@ class Ui_Dialog(QtCore.QObject):
         self.label_8.setText(_translate("Dialog", "Current position: "))
         temp = '('+str(self.position['x'])+','+str(self.position['y'])+')'
         self.currentPositionLabel.setText(_translate("Dialog", temp))
-        
+        self.runStepper.setText(_translate("Dialog", "Start Stepper"))
         
     def Update(self):
         _translate = QtCore.QCoreApplication.translate
         temp = "({:.2f}, {:.2f})".format(self.position['x'], self.position['y'])
         self.currentPositionLabel.setText(_translate("Dialog", temp))
     
+    def StartStepper(self):
+        _translate = QtCore.QCoreApplication.translate
+        if not stepping:
+            self.runStepper.setText(_translate("Dialog", "Stop Stepper"))
+            stepping = True
+            self.stepperThread = threading.Thread(target=self.doStep)
+            self.stepperThread.daemon = True
+            self.stepperThread.start()
+        else:
+            self.stepperThread.stop()
+            stepping = False
+            self.runStepper.setText(_translate("Dialog", "Start Stepper"))
+
+    def doStep(self):
+        while currentStep < len(steeringSteps):
+            currentStep += 1
+
+
+        
+        
+
     def Quit(self):
         QtCore.QCoreApplication.instance().quit()
     
@@ -358,6 +390,14 @@ class PlotCanvas(FigureCanvas):
         self.draw()
         return xl,yl
         
+if doSteering:
+    with open('evd/steering.txt') as f:
+        while True:
+            lineVec = f.readline().split()
+            if len(lineVec) < 1:
+                break
+            x,y = float(lineVec[0]),float(lineVec[1])
+            steeringSteps.append([x,y])
 
 #EncSerial = serial.Serial('COM5', 115200) @hunter
 def reading():
